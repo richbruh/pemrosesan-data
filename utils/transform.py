@@ -10,7 +10,7 @@ def transform_data(df):
     """
     # Buat salinan dataframe untuk transformasi
     df_transformed = df.copy()
-    
+    print(f"Raw Data {(df_transformed.head())} before cleaning.")
     try:
         # 1. Convert price from USD to IDR (exchange rate: Rp16,000)
         def convert_price_to_idr(price):
@@ -20,46 +20,56 @@ def transform_data(df):
                 price_value = float(price.replace("$", "").strip())
                 # Convert to IDR
                 return price_value * 16000
-            except Exception:
+            
+            except Exception as e:
+                print(f"Error converting price: {e}")
                 return None
+                
         
         df_transformed['Price'] = df_transformed['Price'].apply(convert_price_to_idr)
-        
+        print(f"Transformed Data {(df_transformed.head())} after Price Cleaning.")
         # 2. Clean Rating column
         def clean_rating(rating):
             try:
-                if rating == "Invalid Rating":
-                    return None
-                # Extract the rating value (e.g., "4.8 / 5" -> 4.8)
-                if "/" in rating:
-                    return float(rating.split('/')[0].strip())
-                return float(rating)
-            except Exception:
+                if "Rating:" in rating:
+                    # Format: "Rating: ⭐ 3.9 5"
+                    # Ekstrak angka dengan regex
+                    import re
+                    match = re.search(r'(\d+\.\d+)', rating)
+                    if match:
+                        return float(match.group(1))
                 return None
-        
+            except Exception as e:
+                print(f"Error converting price: {e}")
+                return None
         df_transformed['Rating'] = df_transformed['Rating'].apply(clean_rating)
-        
+
         # 3. Extract just the number
         def extract_colors_count(colors):
-            try:
-                if "Colors" in colors:
-                    return int(colors.split()[0])
-                return colors
-            except Exception:
-                return None
-        
+                try:
+                    if "Colors" in colors:
+                        # Format: "3 Colors"
+                        return int(colors.split()[0])
+                    return None
+                except Exception as e:
+                    print(f"Error converting price: {e}")
+                    return None
+                
         df_transformed['Colors'] = df_transformed['Colors'].apply(extract_colors_count)
-        
+
         # 4. Clean Size column 
         def clean_size(size):
             try:
                 if "Size: " in size:
                     return size.replace("Size: ", "").strip()
                 return size
-            except Exception:
+            except Exception as e:
+                print(f"Error converting price: {e}")
                 return None
+            
         
         df_transformed['Size'] = df_transformed['Size'].apply(clean_size)
+
         
         # 5. Clean Gender column (remove "Gender: " prefix)
         def clean_gender(gender):
@@ -67,19 +77,19 @@ def transform_data(df):
                 if "Gender: " in gender:
                     return gender.replace("Gender: ", "").strip()
                 return gender
-            except Exception:
+            except Exception as e:
+                print(f"Error converting price: {e}")
                 return None
         
         df_transformed['Gender'] = df_transformed['Gender'].apply(clean_gender)
-        
-        # 6. Remove rows with null values
-        df_transformed = df_transformed.dropna()
-        
-        # 7. Remove duplicate rows
+    
+
+        # 6. Remove duplicate rows
         df_transformed = df_transformed.drop_duplicates()
-        
-        # 8. Filter out rows with invalid or unwanted values
+
+        # 7. Filter out rows with invalid or unwanted values
         df_transformed = df_transformed[df_transformed['Title'] != "Unknown Product"]
+
         
         return df_transformed
     

@@ -5,16 +5,8 @@ import time
 from datetime import datetime
 
 def scrape_page(url):
-    """
-    Scrape a single page of the Fashion Studio website.
-    
-    Args:
-        url (str): The URL of the page to scrape
-        
-    Returns:
-        list: List of dictionaries containing product data
-    """
     try:
+        print(f"Fetching {url}...")
         response = requests.get(url)
         response.raise_for_status()
         
@@ -22,35 +14,41 @@ def scrape_page(url):
         products = []
         
         # Find all product cards
-        product_cards = soup.find_all('div', class_='product-card')
+        product_cards = soup.find_all('div', class_='collection-card')
+        print(f"Found {len(product_cards)} product cards on page")
         
         for card in product_cards:
             try:
                 # Extract product data
                 title = card.find('h3', class_='product-title').text.strip()
                 
-                # Extract price (handle cases where price might be unavailable)
-                price_element = card.find('div', class_='product-price')
+                # Extract price - update selector
+                price_element = card.find('span', class_='price')
                 if price_element and '$' in price_element.text:
                     price = price_element.text.strip()
                 else:
                     price = "Price Unavailable"
                 
-                # Extract rating
-                rating_element = card.find('div', class_='product-rating')
-                rating = rating_element.text.strip() if rating_element else "Invalid Rating"
+                # Extract paragraphs that contain other info
+                paragraphs = card.find_all('p')
                 
-                # Extract colors
-                colors_element = card.find('span', class_='product-colors')
-                colors = colors_element.text.strip() if colors_element else "Unknown"
+                # Initialize default values
+                rating = "Invalid Rating"
+                colors = "Unknown"
+                size = "Unknown"
+                gender = "Unknown"
                 
-                # Extract size
-                size_element = card.find('span', class_='product-size')
-                size = size_element.text.strip() if size_element else "Unknown"
-                
-                # Extract gender
-                gender_element = card.find('span', class_='product-gender')
-                gender = gender_element.text.strip() if gender_element else "Unknown"
+                # Process each paragraph to extract info
+                for p in paragraphs:
+                    text = p.text.strip()
+                    if "Rating:" in text:
+                        rating = text.replace("Rating:", "").strip()
+                    elif "Colors" in text:
+                        colors = text
+                    elif "Size:" in text:
+                        size = text
+                    elif "Gender:" in text:
+                        gender = text
                 
                 # Add timestamp for when data was scraped
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -88,19 +86,27 @@ def scrape_all_pages(base_url, total_pages=50):
     """
     all_products = []
     
+
     for page in range(1, total_pages + 1):
-        url = f"{base_url}?page={page}"
+        if page == 1:
+            url = base_url
+        else:
+            url = f"{base_url}/page{page}"
         print(f"Scraping page {page}/{total_pages}...")
         
         products = scrape_page(url)
+        print(f"Found {len(products)} products on page {page}")
         all_products.extend(products)
         
         # Add a small delay to avoid overloading the server
         time.sleep(1)
     
-    return pd.DataFrame(all_products)
+    df = pd.DataFrame(all_products)
+    print(f"Total products extracted: {len(df)}")
+    return df
 
-# Test the extraction
-base_url = "https://fashion-studio.dicoding.dev"
-df = scrape_all_pages(base_url, total_pages=2)  # Just 2 pages for testing
-df.head()
+if __name__ == "__main__":
+    # Test the extraction
+    base_url = "https://fashion-studio.dicoding.dev"
+    df = scrape_all_pages(base_url, total_pages=50)  # Just 50 pages
+    print(df.head())

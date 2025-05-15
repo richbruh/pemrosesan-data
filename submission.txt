@@ -1,3 +1,5 @@
+pip install -r requirement.txt
+
 # Menjalankan skrip
 python main.py
 
@@ -7,5 +9,3 @@ python -m pytest tests
 # Menjalankan test coverage pada folder tests
 coverage run -m pytest tests
 
-# Url Google Sheets:
-https://docs.google.com/spreadsheets/your_spreadsheet_id
